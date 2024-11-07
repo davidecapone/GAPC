@@ -1,4 +1,6 @@
 # GAPC
 
-<img src="assets/gapc.png" width="200" height="200" />
+<div style="text-align:center">
+  <img src="assets/gapc.png" width="200" />
+</div>
 
