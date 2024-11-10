@@ -28,10 +28,11 @@ class Command(BaseCommand):
         # Loop through all files in the FITS directory
         for filename in os.listdir(settings.FITS_DIR):
 
+            # Check the file extension
             if not filename.endswith(('fits', 'fit')):
                 continue
 
-            # Extract the asteroid name from the filename
+            # Assuming the asteroid name is the first part of the filename
             asteroid_name = filename.split('_')[0]
 
             # Get or create the asteroid entry in the database
@@ -39,34 +40,46 @@ class Command(BaseCommand):
                 target_name=asteroid_name
             )
 
-            if created:
-                logger.info(f"Asteroid '{asteroid_name}' created!")
-            else:
-                logger.info(f"Asteroid '{asteroid_name}' already exists!")
+            # Log the creation of the asteroid entry
+            logger.info(f"Asteroid '{asteroid_name}' created!") if created else logger.info(f"Asteroid '{asteroid_name}' already exists...")
             
             # Open the FITS file
             with fits.open(os.path.join(settings.FITS_DIR, filename)) as hdul:
                 header = hdul[0].header
                 data = hdul[0].data
 
-                # 1 - Extract the asteroid name and other metadata
-                # 2 - Get or create asteroid entry in database
-                # 3 - Create a new observation entry in the database
-                # 4 - Save the observation entry in the database
-                # 5 - Save the FITS file in the media folder
-                # 6 - Close the FITS file
-                
+                if 'DATE-OBS' not in header:
+                    logger.error(f"DATE-OBS header keyword not found in {filename}")
+                    continue
+
+                # Parse the DATE-OBS header keyword                
                 date_obs = self.parse_date_obs_str(header.get('DATE-OBS'))
 
+                # Update the target_discovery_date if it is not set 
                 if not asteroid.target_discovery_date:
-                    # If the asteroid discovery date is not set, set it to the observation date
-                    asteroid.target_discovery_date = self.parse_date_obs_str(header['DATE-OBS'])
-                    asteroid.save()
-
-                if date_obs < asteroid.target_discovery_date:
-                    # If the observation date is earlier than the discovery date, update the discovery date
                     asteroid.target_discovery_date = date_obs
                     asteroid.save()
+                # Update the target_discovery_date if the new date is earlier
+                if date_obs < asteroid.target_discovery_date:
+                    asteroid.target_discovery_date = date_obs
+                    asteroid.save()
+
+
+                # Create an observation entry in the database
+                exposure_time = header.get('EXPTIME', 0.0)
+                instrument_name = header.get('INSTRUME', 'Unknown')
+
+                observation, obs_created = Observation.objects.get_or_create(
+                    obs_id=obs_id,
+                    asteroid=asteroid,
+                    date_obs=date_obs,
+                    instrument_name=instrument_name,
+                    exposure_time=exposure_time
+                )
+
+                
+
+                
 
     def parse_date_obs_str(self, date_obs_str: str) -> datetime:
         date_formats = [
