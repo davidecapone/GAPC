@@ -3,9 +3,10 @@ import logging
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from gapc.models import Asteroid
+from gapc.models import Asteroid, Observation
 from astropy.io import fits
 from datetime import datetime
+from django.utils import timezone
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -21,6 +22,11 @@ class Command(BaseCommand):
         # Check if the FITS directory exists
         if not os.path.exists(settings.FITS_DIR):
             logger.error(f"Directory '{settings.FITS_DIR}' does not exist!")
+            return
+        
+        # Check if the FITS directory is empty
+        if not os.listdir(settings.FITS_DIR):
+            logger.info(f"Directory '{settings.FITS_DIR}' is empty!")
             return
 
         logger.info(f"Importing FITS files from '{settings.FITS_DIR}'!")
@@ -41,7 +47,7 @@ class Command(BaseCommand):
             )
 
             # Log the creation of the asteroid entry
-            logger.info(f"Asteroid '{asteroid_name}' created!") if created else logger.info(f"Asteroid '{asteroid_name}' already exists...")
+            logger.info(f"'{asteroid}' created!") if created else logger.info(f"'{asteroid}' already exists...")
             
             # Open the FITS file
             with fits.open(os.path.join(settings.FITS_DIR, filename)) as hdul:
@@ -53,33 +59,42 @@ class Command(BaseCommand):
                     continue
 
                 # Parse the DATE-OBS header keyword                
-                date_obs = self.parse_date_obs_str(header.get('DATE-OBS'))
-
-                # Update the target_discovery_date if it is not set 
-                if not asteroid.target_discovery_date:
-                    asteroid.target_discovery_date = date_obs
-                    asteroid.save()
-                # Update the target_discovery_date if the new date is earlier
-                if date_obs < asteroid.target_discovery_date:
-                    asteroid.target_discovery_date = date_obs
-                    asteroid.save()
-
-
-                # Create an observation entry in the database
-                exposure_time = header.get('EXPTIME', 0.0)
-                instrument_name = header.get('INSTRUME', 'Unknown')
-
-                observation, obs_created = Observation.objects.get_or_create(
-                    obs_id=obs_id,
-                    asteroid=asteroid,
-                    date_obs=date_obs,
-                    instrument_name=instrument_name,
-                    exposure_time=exposure_time
+                datetime_obs = self.parse_date_obs_str(
+                    header.get('DATE-OBS')
+                )
+                datetime_obs = timezone.make_aware(
+                    datetime_obs, 
+                    timezone.get_current_timezone()
                 )
 
-                
+                # Update discovery date if needed
+                if not asteroid.target_discovery_date or datetime_obs < asteroid.target_discovery_date:
+                    asteroid.target_discovery_date = datetime_obs
+                    asteroid.save()
 
-                
+                # Extract other observation data
+                exposure_time = header.get('EXPTIME', 0.0)
+                instrument_name = header.get('INSTRUME', 'Unknown')
+                ra_str = header.get('RA', '00:00:00.0')
+                dec_str = header.get('DEC', '00:00:00.0')
+
+                # Check if observation exists based on asteroid and datetime_obs
+                observation, obs_created = Observation.objects.get_or_create(
+                    asteroid=asteroid,
+                    date_obs=datetime_obs,
+                    defaults={
+                        'instrument': instrument_name,
+                        'exposure_time': exposure_time,
+                        'ra': ra_str,
+                        'dec': dec_str
+                    }
+                )
+
+                if obs_created:
+                    logger.info(f"'{observation}' created!")
+                else:
+                    logger.info(f"'{observation}' already exists...")
+
 
     def parse_date_obs_str(self, date_obs_str: str) -> datetime:
         date_formats = [
@@ -91,7 +106,7 @@ class Command(BaseCommand):
 
         for date_format in date_formats:
             try:
-                return datetime.strptime(date_obs_str, date_format).date()
+                return datetime.strptime(date_obs_str, date_format)
             except ValueError:
                 pass
 

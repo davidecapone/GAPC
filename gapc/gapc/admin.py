@@ -1,4 +1,5 @@
 from django.contrib import admin
-from .models import Asteroid  # Import each model you want to register
+from .models import Asteroid, Observation
 
 admin.site.register(Asteroid)
+admin.site.register(Observation)
