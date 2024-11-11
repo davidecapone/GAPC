@@ -11,5 +11,5 @@ class Catalog(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['asteroids'] = Asteroid.objects.all()
+        context['asteroids'] = Asteroid.objects.all().order_by('-target_discovery_date')
         return context

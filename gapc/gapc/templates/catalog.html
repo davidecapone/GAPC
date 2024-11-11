@@ -2,24 +2,37 @@
 {% block title %}GAPC{% endblock %}
 
 {% block content %}
-    <div class="container mt-5">
-        <h1>Asteroid Catalog</h1>
 
-    <ul>
-        {% for asteroid in asteroids %}
-        <div class="my-2 py-2">
-            <div class="card" style="width: 100%;">
-                <div class="card-body">
-                    <h5 class="card-title">
-                        <a href="" class="text-decoration-none">{{ asteroid.target_name }}</a>
-                    </h5>
-                    <h6 class="card-subtitle mb-2 text-body-secondary">First discovery: {{ asteroid.target_discovery_date }}</h6>
-                    <p class="card-text">Info 2</p>
-                    <span class="card-subtitle mb-2 text-body-secondary">Info 2</span>
+    <div class="container mt-5">
+        <h1>Asteroids Catalog</h1>
+    </div>
+
+    <div class="container mt-5">
+            <form method="GET" action="" class="mb-4 mt-3">
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" placeholder="Search by target name, date..." name="search" value="{{ search_query }}">
+                    <button class="btn btn-outline-secondary" type="submit">Search</button>
+                </div>
+            </form>
+    </div>    
+    <div class="container">
+        <ul style="margin: 0; padding: 0;">
+            {% for asteroid in asteroids %}
+            <div class="my-1 py-2">
+                <div class="card" style="width: 100%;">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="" class="text-decoration-none">{{ asteroid.target_name }}</a>
+                        </h5>
+                        <span class="card-subtitle mb-1 text-body-secondary">Discovered on {{ asteroid.target_discovery_date }}</span>
+                        <p class="mt-1 text-end">
+                            <span class="badge bg-primary">undefined</span>
+                        </p>
+                    </div>
                 </div>
             </div>
-        </div>
-        {% endfor %}
-    </ul>
+            {% endfor %}
+        </ul>
     </div>
+    
 {% endblock %}
