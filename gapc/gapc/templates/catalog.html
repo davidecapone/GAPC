@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}GAPC{% endblock %}
+
+{% block content %}
+    <div class="container mt-5">
+        <h1>Asteroid Catalog</h1>
+
+    <ul>
+        {% for asteroid in asteroids %}
+        <div class="my-2 py-2">
+            <div class="card" style="width: 100%;">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <a href="" class="text-decoration-none">{{ asteroid.target_name }}</a>
+                    </h5>
+                    <h6 class="card-subtitle mb-2 text-body-secondary">Info 1</h6>
+                    <p class="card-text">Info 2</p>
+                    <span class="card-subtitle mb-2 text-body-secondary">Info 3</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </ul>
+    </div>
+{% endblock %}

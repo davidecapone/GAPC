@@ -22,4 +22,5 @@ from . import views  # Import views.py
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.home, name='home'),  # Route the home page to the home view
+    path('catalog/', views.Catalog.as_view(), name='catalog'),  # Route the catalog page to the Catalog view
 ]
