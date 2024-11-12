@@ -4,12 +4,25 @@
 <div class="container mt-5">
     <h1>{{ asteroid.target_name }}</h1>
     <span class="card-subtitle mb-1 text-body-secondary">Discovered on {{ asteroid.target_discovery_date }}</span>
+    <span>{{ asteroid.target_description }}</span>
+    <span>Classification: {{ asteroid.get_target_class_display }}</span>
+    <span>Size: {{ asteroid.target_size }} km</span>
 </div>
 
-<div class="container mt-5">
-</div>    
+<div class="container mt-4">
 
-<div class="container">
-    
+    <h2>Observations</h2>
+    <ul>
+        {% for observation in observations %}
+            <li>
+                Observation on {{ observation.date_obs }}<br>
+                Instrument: {{ observation.instrument }}<br>
+                Exposure Time: {{ observation.exposure_time }} seconds<br>
+                RA: {{ observation.ra }} | Dec: {{ observation.dec }}
+            </li>
+        {% empty %}
+            <p>No observations available for this asteroid.</p>
+        {% endfor %}
+    </ul>
 </div>
 {% endblock %}
