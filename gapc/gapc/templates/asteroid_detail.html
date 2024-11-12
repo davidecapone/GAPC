@@ -4,25 +4,33 @@
 <div class="container mt-5">
     <h1>{{ asteroid.target_name }}</h1>
     <span class="card-subtitle mb-1 text-body-secondary">Discovered on {{ asteroid.target_discovery_date }}</span>
-    <span>{{ asteroid.target_description }}</span>
-    <span>Classification: {{ asteroid.get_target_class_display }}</span>
-    <span>Size: {{ asteroid.target_size }} km</span>
+    <p class="mt-3">{{ asteroid.target_description }}</p>
+    <span class="badge bg-primary">{{ asteroid.target_class }}</span>
 </div>
 
 <div class="container mt-4">
-
-    <h2>Observations</h2>
-    <ul>
-        {% for observation in observations %}
-            <li>
-                Observation on {{ observation.date_obs }}<br>
-                Instrument: {{ observation.instrument }}<br>
-                Exposure Time: {{ observation.exposure_time }} seconds<br>
-                RA: {{ observation.ra }} | Dec: {{ observation.dec }}
-            </li>
-        {% empty %}
+    <h3>Observations</h3>
+    <div class="container">
+        <ul style="margin: 0; padding: 0;">
+            {% for observation in observations %}
+            <div class="my-1 py-1">
+                <div class="card" style="width: 100%;">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            Observation on {{ observation.date_obs }}
+                        </h5>
+                        <span class="card-subtitle mb-1 text-body-secondary">Instrument: {{ observation.instrument }}</span>
+                        <p class="mt-1">
+                            <strong>Exposure Time:</strong> {{ observation.exposure_time }} seconds<br>
+                            <strong>RA:</strong> {{ observation.ra }} | <strong>Dec:</strong> {{ observation.dec }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
             <p>No observations available for this asteroid.</p>
-        {% endfor %}
-    </ul>
+            {% endfor %}
+        </ul>
+    </div>
 </div>
 {% endblock %}
