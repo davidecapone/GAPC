@@ -23,4 +23,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.Catalog.as_view(), name='home'),  # Route the home page to the home view
     path('catalog/', views.Catalog.as_view(), name='catalog'),  # Route the catalog page to the Catalog view
+    path('catalog/<str:target_name>/', views.AsteroidDetail.as_view(), name='asteroid_detail'),  # Route the asteroid detail page using target_name
 ]

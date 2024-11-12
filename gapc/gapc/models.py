@@ -4,6 +4,14 @@ from django.utils import timezone
 
 class Asteroid(models.Model):
 
+    CLASS_CHOICES = [
+        ("neo", "Near-Earth Object"),
+        ("comet", "Comet"),
+        ("asteroid", "Asteroid"),
+        ("trojan", "Trojan"),
+        ("undefined", "Undefined"),
+    ]
+
     target_name = models.CharField(
         primary_key=True,
         max_length=100,
@@ -24,7 +32,9 @@ class Asteroid(models.Model):
 
     target_class = models.CharField(
         max_length=50,
+        choices=CLASS_CHOICES,
         blank=True,
+        default="undefined",
         help_text='Classification of the asteroid'
     )
 

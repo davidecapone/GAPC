@@ -1,38 +1,36 @@
 {% extends 'base.html' %}
 {% block title %}GAPC{% endblock %}
-
 {% block content %}
+<div class="container mt-5">
+    <h1>Asteroids Catalog</h1>
+</div>
 
-    <div class="container mt-5">
-        <h1>Asteroids Catalog</h1>
-    </div>
+<div class="container mt-5">
+    <form method="GET" action="" class="mb-4 mt-3">
+        <div class="input-group mb-3">
+            <input type="text" class="form-control" placeholder="Search by target name, date..." name="search" value="{{ search_query }}">
+            <button class="btn btn-outline-secondary" type="submit">Search</button>
+        </div>
+    </form>
+</div>    
 
-    <div class="container mt-5">
-            <form method="GET" action="" class="mb-4 mt-3">
-                <div class="input-group mb-3">
-                    <input type="text" class="form-control" placeholder="Search by target name, date..." name="search" value="{{ search_query }}">
-                    <button class="btn btn-outline-secondary" type="submit">Search</button>
-                </div>
-            </form>
-    </div>    
-    <div class="container">
-        <ul style="margin: 0; padding: 0;">
-            {% for asteroid in asteroids %}
-            <div class="my-1 py-2">
-                <div class="card" style="width: 100%;">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            <a href="" class="text-decoration-none">{{ asteroid.target_name }}</a>
-                        </h5>
-                        <span class="card-subtitle mb-1 text-body-secondary">Discovered on {{ asteroid.target_discovery_date }}</span>
-                        <p class="mt-1 text-end">
-                            <span class="badge bg-primary">undefined</span>
-                        </p>
-                    </div>
+<div class="container">
+    <ul style="margin: 0; padding: 0;">
+        {% for asteroid in asteroids %}
+        <div class="my-1 py-1">
+            <div class="card" style="width: 100%;">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <a href="{% url 'asteroid_detail' target_name=asteroid.target_name %}" class="text-decoration-none">{{ asteroid.target_name }}</a>
+                    </h5>
+                    <span class="card-subtitle mb-1 text-body-secondary">Discovered on {{ asteroid.target_discovery_date }}</span>
+                    <p class="mt-1 text-end">
+                        <span class="badge bg-primary">{{ asteroid.target_class }}</span>
+                    </p>
                 </div>
             </div>
-            {% endfor %}
-        </ul>
-    </div>
-    
+        </div>
+        {% endfor %}
+    </ul>
+</div>
 {% endblock %}
