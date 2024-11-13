@@ -7,9 +7,37 @@
 
 <div class="container mt-5">
     <form method="GET" action="" class="mb-4 mt-3">
-        <div class="input-group mb-3">
-            <input type="text" class="form-control" placeholder="Search by name, description, class..." name="search" value="{{ search_query }}">
-            <button class="btn btn-outline-secondary" type="submit">Search</button>
+        <div class="row g-2 align-items-center">
+
+            <!-- Search Input -->
+            <div class="col-md-6">
+                <input type="text" class="form-control" placeholder="Search by target name..." name="search" value="{{ search_query }}">
+            </div>
+
+            <!-- Classification Filter Dropdown -->
+            <div class="col-md-2">
+                <select class="form-select" name="classification">
+                    <option value="">Target class</option>
+                    {% for classification in classifications %}
+                    <option value="{{ classification }}" {% if selected_classification == classification %}selected{% endif %}>
+                        {{ classification|title }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Sort Order Dropdown -->
+            <div class="col-md-2">
+                <select class="form-select" name="order">
+                    <option value="desc" {% if order_by_date == 'desc' %}selected{% endif %}>Newest First</option>
+                    <option value="asc" {% if order_by_date == 'asc' %}selected{% endif %}>Oldest First</option>
+                </select>
+            </div>
+
+            <!-- Search Button -->
+            <div class="col-md-2">
+                <button class="btn btn-secondary w-100" type="submit">Search</button>
+            </div>
         </div>
     </form>
 </div>    
@@ -24,9 +52,15 @@
                         <a href="{% url 'asteroid_detail' target_name=asteroid.target_name %}" class="text-decoration-none">{{ asteroid.target_name }}</a>
                     </h5>
                     <span class="card-subtitle mb-1 text-body-secondary">Discovered on {{ asteroid.target_discovery_date }}</span>
-                    <p class="mt-2">
-                        <span class="badge bg-primary">{{ asteroid.target_class }}</span>
+                    <p class="mt-3">
+                        <span>Target class:</span> <strong>{{ asteroid.target_class }}</strong><br>
+                        <span>Observations:</span> <strong>{{ asteroid.observations.count }}</strong>
                     </p>
+                    {% if asteroid.target_description %}
+                    <p>{{ asteroid.target_description }}</p>
+                    {% else %}
+                    <p>No description available.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
