@@ -17,6 +17,8 @@ Including another URLconf
 # gapc/urls.py
 from django.contrib import admin
 from django.urls import path
+from django.conf.urls.static import static
+from django.conf import settings
 from . import views  # Import views.py
 
 urlpatterns = [
@@ -25,3 +27,6 @@ urlpatterns = [
     path('catalog/', views.Catalog.as_view(), name='catalog'),  # Route the catalog page to the Catalog view
     path('catalog/<str:target_name>/', views.AsteroidDetail.as_view(), name='asteroid_detail'),  # Route the asteroid detail page using target_name
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

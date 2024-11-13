@@ -49,8 +49,9 @@ class Command(BaseCommand):
             # Log the creation of the asteroid entry
             logger.info(f"'{asteroid}' created!") if created else logger.info(f"'{asteroid}' already exists...")
             
-            # Open the FITS file
-            with fits.open(os.path.join(settings.FITS_DIR, filename)) as hdul:
+            fits_file_path = os.path.join(settings.FITS_DIR, filename)
+
+            with fits.open(fits_file_path) as hdul:
                 header = hdul[0].header
                 data = hdul[0].data
 
@@ -86,7 +87,8 @@ class Command(BaseCommand):
                         'instrument': instrument_name,
                         'exposure_time': exposure_time,
                         'ra': ra_str,
-                        'dec': dec_str
+                        'dec': dec_str,
+                        'filename': filename
                     }
                 )
 

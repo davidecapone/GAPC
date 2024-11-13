@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.conf import settings
 
 
 class Asteroid(models.Model):
@@ -91,6 +92,13 @@ class Observation(models.Model):
         null=True,
         blank=True,
         help_text='Declination in DD:MM:SS.s format'
+    )
+
+    filename = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="File name of the observation FITS file"
     )
 
     def __str__(self):
