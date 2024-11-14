@@ -3,6 +3,42 @@ from django.utils import timezone
 from django.conf import settings
 
 
+class Instrument(models.Model):
+
+    name = models.CharField(
+        primary_key=True,
+        max_length=100, 
+        help_text="Name of the instrument, e.g., Alta U9000"
+    )
+
+    manufacturer = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Manufacturer of the instrument"
+    )
+
+    max_exposure_time = models.FloatField(
+        help_text="Maximum exposure time in milliseconds"
+    )
+
+    min_exposure_time = models.FloatField(
+        help_text="Minimum exposure time in milliseconds"
+    )
+
+    pixel_size = models.CharField(
+        max_length=20, 
+        help_text="Pixel size in microns, e.g., 12 x 12 microns"
+    )
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Instrument'
+        verbose_name_plural = 'Instruments'
+
+
 class Asteroid(models.Model):
 
     CLASS_CHOICES = [
@@ -70,11 +106,13 @@ class Observation(models.Model):
         help_text='Date and time of the observation'
     )
 
-    instrument = models.CharField(
-        blank=True,
-        max_length=100,
-        help_text='Instrument used for the observation'
+    instrument = models.ForeignKey(
+        Instrument, 
+        on_delete=models.SET_NULL, 
+        null=True, blank=True, 
+        help_text="Instrument used for the observation"
     )
+
 
     exposure_time = models.FloatField(
         help_text='Exposure time in seconds'
@@ -92,6 +130,12 @@ class Observation(models.Model):
         null=True,
         blank=True,
         help_text='Declination in DD:MM:SS.s format'
+    )
+
+    temperature = models.FloatField(
+        null=True,
+        blank=True,
+        help_text='Temperature during observation in Celsius'
     )
 
     filename = models.CharField(

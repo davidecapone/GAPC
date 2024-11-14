@@ -2,8 +2,7 @@
 {% block title %}GAPC{% endblock %}
 {% block content %}
 <div class="container mt-5">
-    <h1>{{ asteroid.target_name }}</h1>
-    <span class="card-subtitle mb-1 text-body-secondary">Discovered on {{ asteroid.target_discovery_date }}</span>
+    <h1>{{ asteroid }}</h1>
     {% if asteroid.target_description %}
         <p class="mt-3">{{ asteroid.target_description }}</p>
     {% else %}
@@ -13,22 +12,22 @@
 
 <div class="container mt-4">
     <div class="container">
-        <p class="text-end">
-            <a href="" class="btn btn-secondary">Export to VOTable</a>
-        </p>
         <ul style="margin: 0; padding: 0;">
             {% for observation in observations %}
             <div class="my-1 py-1">
                 <div class="card" style="width: 100%;">
                     <div class="card-body">
-                        <h5 class="card-title">Observation on {{ observation.date_obs }}</h5>
-                        <p class="mt-3">
-                            <span>Exposure Time:</span> <strong>{{ observation.exposure_time }} seconds</strong><br>
+                        <p class="card-subtitle text-body-secondary">Observation on {{ observation.date_obs }}</p>
+                        <p class="mt-2">
+                            <span>Instrument:</span> <strong>{{ observation.instrument }}</strong><br>
+                            <span>Camera temperature:</span> <strong>{{ observation.temperature }} °C</strong><br>
+                            <span>Exposure Time:</span> <strong>{{ observation.exposure_time }} seconds</strong><br><br>
+
                             <span>RA:</span> <strong>{{ observation.ra }}</strong><br> 
                             <span>Dec:</span> <strong>{{ observation.dec }}</strong><br>
-                            <span>Instrument:</span> <strong>{{ observation.instrument }}</strong><br>
                         </p>
                         <a href="{{ observation.filename }}" class="btn btn-primary mt-2" target="_blank">Download FITS file</a>
+                        <a href="{% url 'export_votable' observation.obs_id %}" class="btn btn-secondary mt-2" target="_blank">Export VOTable</a>
                     </div>
                 </div>
             </div>
