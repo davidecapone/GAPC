@@ -18,15 +18,21 @@ class Instrument(models.Model):
     )
 
     max_exposure_time = models.FloatField(
+        blank=True,
+        null=True,
         help_text="Maximum exposure time in milliseconds"
     )
 
     min_exposure_time = models.FloatField(
+        blank=True,
+        null=True,
         help_text="Minimum exposure time in milliseconds"
     )
 
     pixel_size = models.CharField(
         max_length=20, 
+        blank=True,
+        null=True,
         help_text="Pixel size in microns, e.g., 12 x 12 microns"
     )
 
