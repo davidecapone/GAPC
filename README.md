@@ -10,6 +10,7 @@ GAPC is a Django-based application designed to manage and catalog observations o
 - [GAPC - Asteroid Observation Catalog](#gapc---asteroid-observation-catalog)
   - [Table of Contents](#table-of-contents)
   - [Features](#features)
+  - [Data standards](#data-standards)
   - [Project Structure](#project-structure)
   - [Installation](#installation)
 
@@ -24,6 +25,12 @@ GAPC is a Django-based application designed to manage and catalog observations o
 - **VOTable Export**: Export observation data in VOTable format for compatibility with IVOA-compliant tools, supporting interoperability.
 - **Search and Filter**: Filter and search the catalog by asteroid name, classification, and discovery date, with ordering options.
 
+---
+## Data standards
+This project adheres to the following data standards:
+- VOTable: The observation data can be exported in VOTable format, providing interoperability with IVOA-compliant tools.
+- FITS Metadata Extraction: Metadata from FITS headers (such as DATE-OBS, EXPTIME, RA, DEC) is automatically parsed and stored with each observation.
+- Linked Open Data Principles: The catalog is structured to support linked data standards for discoverability and openness.
 ---
 
 ## Project Structure
