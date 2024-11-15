@@ -1,1 +1,4 @@
+Django
 astropy
+numpy
+tqdm
