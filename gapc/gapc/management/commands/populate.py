@@ -1,12 +1,3 @@
-"""
-This script is a Django management command that imports FITS (Flexible Image Transport System) files 
-from a specified directory into the Django database. For each FITS file, it extracts relevant metadata 
-(e.g., observation date, instrument used, exposure time, and temperature) and creates or updates database 
-records for asteroids, observations, and instruments.
-
-Processed files are moved to a 'processed' folder within the input directory to prevent duplicate imports. 
-The script also allows users to specify a custom input directory using the '--input' argument.
-"""
 import os
 import logging
 import shutil
@@ -19,6 +10,7 @@ from django.utils import timezone
 
 from gapc.models import Asteroid, Observation, Instrument
 from astropy.io import fits
+from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -30,6 +22,8 @@ class Command(BaseCommand):
     help = 'Import FITS files from media/fits folder to database'
 
     def add_arguments(self, parser):
+
+        # Add an optional argument to specify the input directory for FITS files
         parser.add_argument(
             '--input',
             type=str,
@@ -37,13 +31,20 @@ class Command(BaseCommand):
             help='Path to the directory containing FITS files (defaults to settings.FITS_DIR)'
         )
 
+        # Add an optional argument to specify the processed directory
+        parser.add_argument(
+            '--processed',
+            type=str,
+            default=os.path.join(settings.FITS_DIR, 'processed'),
+            help='Name of the directory to move processed files (defaults to "processed")'
+        )
 
     def handle(self, *args, **options):
         """Main handler function to start the FITS import process."""
         fits_dir = options['input']
+        processed_dir = options['processed']
 
         # Create a 'processed' directory to move processed files
-        processed_dir = os.path.join(fits_dir, 'processed')
         os.makedirs(processed_dir, exist_ok=True)
 
         if not os.path.isdir(fits_dir) or not os.listdir(fits_dir):
@@ -54,22 +55,23 @@ class Command(BaseCommand):
         self.import_fits_files(fits_dir, processed_dir)
         logger.info("FITS file import completed!")
 
-
     def import_fits_files(self, directory, processed_dir):
         """Iterates over FITS files in the directory and processes them."""
-        for filename in os.listdir(directory):
-            if filename.lower().endswith(SUPPORTED_FITS_EXTENSIONS):
-                # Process the FITS file
-                self.process_fits_file(
-                    os.path.join(directory, filename)
-                )
-                # Move the processed file to the 'processed' directory
-                shutil.move(
-                    os.path.join(directory, filename),
-                    os.path.join(processed_dir, filename)
-                )
-            else:
-                logger.debug(f"Skipped non-FITS file: {filename}")
+        files = [
+            filename for filename in os.listdir(directory)
+            if filename.lower().endswith(SUPPORTED_FITS_EXTENSIONS)
+        ]
+
+        # Use tqdm for progress indication
+        for filename in tqdm(files, desc="Processing FITS files", unit="file"):
+            fits_file_path = os.path.join(directory, filename)
+            self.process_fits_file(fits_file_path)
+
+            # Move the processed file to the 'processed' directory
+            shutil.move(
+                fits_file_path,
+                os.path.join(processed_dir, filename)
+            )
 
     def process_fits_file(self, fits_file_path):
         """Processes a single FITS file."""
