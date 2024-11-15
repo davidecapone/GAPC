@@ -28,15 +28,21 @@ class Command(BaseCommand):
             default=DEFAULT_OUTPUT_FILE,
             help='Path to the output CSV file (defaults to settings.MEDIA_ROOT/asteroid_mappings.csv)'
         )
+        parser.add_argument(
+            '--append',
+            action='store_true',
+            help='Append new mappings to the existing CSV file instead of overwriting it'
+        )
 
     def handle(self, *args, **options):
         url = options['url']
         output_file = options['output']
+        append = options['append']
 
         logger.info(f"Starting to fetch asteroid mappings from {url}...")
         try:
             mappings = self.fetch_designation_mappings(url)
-            self.write_to_csv(mappings, output_file)
+            self.write_to_csv(mappings, output_file, append)
             logger.info(f"Asteroid mappings saved successfully to {output_file}")
         except Exception as e:
             logger.error(f"Error while creating CSV: {e}", exc_info=True)
@@ -69,14 +75,16 @@ class Command(BaseCommand):
         logger.info(f"Total mappings found: {len(mappings)}")
         return mappings
 
-    def write_to_csv(self, mappings, output_file):
+    def write_to_csv(self, mappings, output_file, append):
         """Write the mappings to a CSV file."""
-        logger.info(f"Writing mappings to {output_file}...")
+        mode = 'a' if append else 'w'
+        logger.info(f"{'Appending' if append else 'Writing'} mappings to {output_file}...")
         try:
             os.makedirs(os.path.dirname(output_file), exist_ok=True)  # Ensure the directory exists
-            with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
+            with open(output_file, mode, newline='', encoding='utf-8') as csvfile:
                 writer = csv.writer(csvfile)
-                writer.writerow(['Provisional Name', 'Official Name'])
+                if not append or os.stat(output_file).st_size == 0:  # Write header only if not appending or file is empty
+                    writer.writerow(['Provisional Name', 'Official Name'])
                 writer.writerows(mappings)
         except Exception as e:
             logger.error(f"Failed to write to {output_file}: {e}", exc_info=True)

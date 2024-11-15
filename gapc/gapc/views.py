@@ -81,51 +81,6 @@ def export_votable(request, obs_id):
     
     return response
 
-"""
-def export_votable(request, obs_id):
-    # Retrieve the observation object
-    observation = get_object_or_404(Observation, obs_id=obs_id)
-    
-    # Create VOTable structure
-    votable = VOTableFile()
-    resource = Resource()
-    votable.resources.append(resource)
-
-    # Define table fields based on observation fields
-    votable_table = Table(votable)
-    resource.tables.append(votable_table)
-    
-    fields = [
-        ('date_obs', 'char', 'Date and time of the observation'),
-        ('instrument', 'char', 'Instrument used for the observation'),
-        ('temperature', 'float', 'Camera temperature in Celsius'),
-        ('exposure_time', 'float', 'Exposure time in seconds'),
-        ('ra', 'char', 'Right Ascension'),
-        ('dec', 'char', 'Declination')
-    ]
-    
-    for field_name, datatype, description in fields:
-        votable_table.fields.append(Field(votable, name=field_name, datatype=datatype, arraysize="*", description=description))
-    votable_table.create_arrays(1)  # Create a table with one row
-
-    # Populate table data with observation details
-    votable_table.array[0] = (
-        str(observation.date_obs) if observation.date_obs else None,
-        str(observation.instrument) if observation.instrument else None,
-        observation.temperature if observation.temperature is not None else np.ma.masked,
-        observation.exposure_time if observation.exposure_time is not None else np.ma.masked,
-        observation.ra if observation.ra else None,
-        observation.dec if observation.dec else None
-    )
-
-    # Create HTTP response with VOTable XML
-    response = HttpResponse(content_type='application/xml')
-    response['Content-Disposition'] = f'attachment; filename="observation_{obs_id}.xml"'
-    votable.to_xml(response)
-    
-    return response
-"""
-
 class Catalog(TemplateView):
     template_name = 'catalog.html'
     context_object_name = 'asteroids'
@@ -143,7 +98,8 @@ class Catalog(TemplateView):
         
         if search_query:
             queryset = queryset.filter(
-                Q(target_name__icontains=search_query) | 
+                Q(provisional_name__icontains=search_query) |
+                Q(official_name__icontains=search_query) |
                 Q(target_description__icontains=search_query)
             )
         
@@ -165,6 +121,7 @@ class Catalog(TemplateView):
         context['classifications'] = sorted(classifications)  # Sort alphabetically, optional
         context['order_by_date'] = order_by_date
         return context
+
 class AsteroidDetail(TemplateView):
     template_name = 'asteroid_detail.html'
 

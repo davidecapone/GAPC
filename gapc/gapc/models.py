@@ -1,6 +1,5 @@
 from django.db import models
 from django.utils import timezone
-from django.conf import settings
 
 
 class Instrument(models.Model):
@@ -44,24 +43,38 @@ class Instrument(models.Model):
         verbose_name = 'Instrument'
         verbose_name_plural = 'Instruments'
 
-
 class Asteroid(models.Model):
-
-    CLASS_CHOICES = [
-        ("neo", "Near-Earth Object"),
-        ("comet", "Comet"),
-        ("asteroid", "Asteroid"),
-        ("trojan", "Trojan"),
-        ("undefined", "Undefined"),
+    STATUS_CHOICES = [
+        ("confirmed", "Confirmed"),
+        ("not_confirmed", "Not Confirmed"),
+        ("pending", "Pending Confirmation"),
     ]
 
-    target_name = models.CharField(
-        primary_key=True,
+    # Provisional name (e.g., ZTF0NiK)
+    provisional_name = models.CharField(
         max_length=100,
-        unique=True,
-        help_text='Official name or designation of the asteroid'
+        primary_key=True,  # Set as the primary key
+        help_text="Provisional name or designation of the asteroid"
     )
 
+    # Official name (e.g., 2022 GO5)
+    official_name = models.CharField(
+        max_length=100,
+        unique=True,
+        blank=True,
+        null=True,
+        help_text="Official name of the asteroid"
+    )
+
+    # Status of the asteroid
+    status = models.CharField(
+        max_length=15,
+        choices=STATUS_CHOICES,
+        default="pending",
+        help_text="Confirmation status of the asteroid"
+    )
+
+    # Other existing fields
     target_description = models.TextField(
         blank=True,
         help_text='Brief description of the asteroid'
@@ -75,7 +88,13 @@ class Asteroid(models.Model):
 
     target_class = models.CharField(
         max_length=50,
-        choices=CLASS_CHOICES,
+        choices=[
+            ("neo", "Near-Earth Object"),
+            ("comet", "Comet"),
+            ("asteroid", "Asteroid"),
+            ("trojan", "Trojan"),
+            ("undefined", "Undefined"),
+        ],
         blank=True,
         default="undefined",
         help_text='Classification of the asteroid'
@@ -88,20 +107,19 @@ class Asteroid(models.Model):
     )
 
     def __str__(self):
-        return f"Asteroid {self.target_name}"
-    
+        return self.official_name or self.provisional_name or "Unnamed Asteroid"
+
     class Meta:
-        ordering = ['target_name']
+        ordering = ['status', 'official_name', 'provisional_name']
         verbose_name = 'Asteroid'
         verbose_name_plural = 'Asteroids'
-
 
 class Observation(models.Model):
 
     obs_id = models.AutoField(primary_key=True)  # Add an explicit primary key field
 
     asteroid = models.ForeignKey(
-        Asteroid,
+    Asteroid,
         on_delete=models.CASCADE,
         related_name='observations',
         help_text='Asteroid observed',
@@ -152,8 +170,9 @@ class Observation(models.Model):
     )
 
     def __str__(self):
+        asteroid_name = self.asteroid.official_name or self.asteroid.provisional_name or "Unnamed Asteroid"
         local_date_obs = timezone.localtime(self.date_obs)  # Convert to local timezone
-        return f"Observation of {self.asteroid.target_name} on {local_date_obs}"
+        return f"Observation of {asteroid_name} on {local_date_obs}"
 
     class Meta:
         ordering = ['-date_obs']

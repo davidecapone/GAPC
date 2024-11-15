@@ -1,7 +1,7 @@
 import os
+import csv
 import logging
 import shutil
-
 from datetime import datetime
 
 from django.core.management.base import BaseCommand
@@ -15,68 +15,70 @@ from tqdm import tqdm
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Supported FITS file extensions
 SUPPORTED_FITS_EXTENSIONS = ('fits', 'fit')
+MAPPINGS_FILE = os.path.join(settings.MEDIA_ROOT, 'mappings.csv')  # Adjust path as necessary
 
 class Command(BaseCommand):
-    help = 'Import FITS files from media/fits folder to database'
+    help = 'Import FITS files from a specified directory into the database'
 
     def add_arguments(self, parser):
-
-        # Add an optional argument to specify the input directory for FITS files
         parser.add_argument(
             '--input',
             type=str,
             default=settings.FITS_DIR,
             help='Path to the directory containing FITS files (defaults to settings.FITS_DIR)'
         )
-
-        # Add an optional argument to specify the processed directory
         parser.add_argument(
             '--processed',
             type=str,
             default=os.path.join(settings.FITS_DIR, 'processed'),
-            help='Name of the directory to move processed files (defaults to "processed")'
+            help='Path to move processed files (defaults to "processed")'
         )
 
     def handle(self, *args, **options):
-        """Main handler function to start the FITS import process."""
         fits_dir = options['input']
         processed_dir = options['processed']
-
-        # Create a 'processed' directory to move processed files
         os.makedirs(processed_dir, exist_ok=True)
 
         if not os.path.isdir(fits_dir) or not os.listdir(fits_dir):
             logger.info(f"Directory '{fits_dir}' does not exist or is empty!")
             return
 
+        # Load mappings from CSV
+        mappings = self.load_mappings(MAPPINGS_FILE)
+
         logger.info(f"Starting FITS file import from '{fits_dir}'")
-        self.import_fits_files(fits_dir, processed_dir)
+        self.import_fits_files(fits_dir, processed_dir, mappings)
         logger.info("FITS file import completed!")
 
-    def import_fits_files(self, directory, processed_dir):
-        """Iterates over FITS files in the directory and processes them."""
+    def load_mappings(self, mappings_file):
+        """Load provisional-to-official name mappings from a CSV file."""
+        mappings = {}
+        try:
+            with open(mappings_file, 'r', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    mappings[row['Provisional Name']] = row['Official Name']
+            logger.info(f"Loaded {len(mappings)} asteroid mappings.")
+        except FileNotFoundError:
+            logger.warning(f"Mappings file '{mappings_file}' not found. All asteroids will be set as 'not_confirmed'.")
+        return mappings
+
+    def import_fits_files(self, directory, processed_dir, mappings):
         files = [
             filename for filename in os.listdir(directory)
             if filename.lower().endswith(SUPPORTED_FITS_EXTENSIONS)
         ]
 
-        # Use tqdm for progress indication
         for filename in tqdm(files, desc="Processing FITS files", unit="file"):
             fits_file_path = os.path.join(directory, filename)
-            self.process_fits_file(fits_file_path)
+            self.process_fits_file(fits_file_path, mappings)
 
-            # Move the processed file to the 'processed' directory
-            shutil.move(
-                fits_file_path,
-                os.path.join(processed_dir, filename)
-            )
+            shutil.move(fits_file_path, os.path.join(processed_dir, filename))
 
-    def process_fits_file(self, fits_file_path):
-        """Processes a single FITS file."""
-        asteroid_name = self.get_asteroid_name_from_filename(fits_file_path)
-        asteroid = self.get_or_create_asteroid(asteroid_name)
+    def process_fits_file(self, fits_file_path, mappings):
+        provisional_name = self.get_provisional_name_from_filename(fits_file_path)
+        asteroid = self.get_or_create_asteroid(provisional_name, mappings)
 
         with fits.open(fits_file_path) as hdul:
             header = hdul[0].header
@@ -84,41 +86,32 @@ class Command(BaseCommand):
             if date_obs is None:
                 logger.error(f"Invalid DATE-OBS value in {fits_file_path}")
                 return
-        
+
             self.create_or_update_observation(header, asteroid, date_obs, fits_file_path)
 
-    def get_asteroid_name_from_filename(self, filename):
-        """Extracts the asteroid name from the filename."""
+    def get_provisional_name_from_filename(self, filename):
+        """Extracts the provisional name from the filename."""
         return os.path.basename(filename).split('_')[0]
 
-    def get_or_create_asteroid(self, name):
-        """Retrieves or creates an asteroid instance by name."""
-        asteroid, created = Asteroid.objects.get_or_create(target_name=name)
-        if created:
-            logger.info(f"Created asteroid: {name}")
-        return asteroid
-    
-    def get_or_create_instrument(self, name):
-        """Retrieves or creates an instrument instance."""
-        if name == 'Unknown':
-            name = "Alta U9000"  # Default instrument if unknown
-
-        instrument, created = Instrument.objects.get_or_create(
-            name=name,
+    def get_or_create_asteroid(self, provisional_name, mappings):
+        """Retrieves or creates an asteroid instance, setting the official name if available."""
+        official_name = mappings.get(provisional_name)
+        status = 'confirmed' if official_name else 'not_confirmed'
+        asteroid, created = Asteroid.objects.get_or_create(
+            provisional_name=provisional_name,
             defaults={
-                'manufacturer': "Apogee Imaging Systems",  
-                'max_exposure_time': 60000.0,  
-                'min_exposure_time': 1.0,
-                'pixel_size': "12 x 12 microns"
+                'official_name': official_name,
+                'status': status
             }
         )
-
         if created:
-            logger.info(f"Created instrument with default values: {instrument}")
-        return instrument
+            if official_name:
+                logger.info(f"Created asteroid: Provisional={provisional_name}, Official={official_name}, Status={status}")
+            else:
+                logger.info(f"Created asteroid with provisional name: {provisional_name}, Status={status}")
+        return asteroid
 
     def create_or_update_observation(self, header, asteroid, date_obs, filename):
-        """Creates or updates an observation based on FITS header data."""
         instrument = self.get_or_create_instrument(header.get('INSTRUME', 'Unknown'))
         observation, created = Observation.objects.get_or_create(
             asteroid=asteroid,
@@ -137,12 +130,29 @@ class Command(BaseCommand):
         else:
             logger.info(f"Observation already exists for date: {date_obs}")
 
+    def get_or_create_instrument(self, name):
+        """Retrieves or creates an instrument instance."""
+        if name == 'Unknown':
+            name = "Alta U9000"  # Default instrument if unknown
+
+        instrument, created = Instrument.objects.get_or_create(
+            name=name,
+            defaults={
+                'manufacturer': "Apogee Imaging Systems",
+                'max_exposure_time': 60000.0,
+                'min_exposure_time': 1.0,
+                'pixel_size': "12 x 12 microns"
+            }
+        )
+
+        if created:
+            logger.info(f"Created instrument with default values: {instrument}")
+        return instrument
+
     def get_rounded_temperature(self, temp):
-        """Rounds the temperature to three decimals if present."""
         return round(temp, 3) if temp is not None else None
-    
+
     def parse_date_obs(self, date_obs_str):
-        """Parses the DATE-OBS field into a timezone-aware datetime object."""
         if not date_obs_str:
             return None
         for date_format in ['%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d', '%y/%m/%d']:
