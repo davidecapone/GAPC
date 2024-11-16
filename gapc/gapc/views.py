@@ -135,7 +135,8 @@ class AsteroidDetail(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        asteroid = get_object_or_404(Asteroid, target_name=self.kwargs['target_name'])
+        # Use 'provisional_name' to get the asteroid instance
+        asteroid = get_object_or_404(Asteroid, provisional_name=self.kwargs['target_name'])
 
         context['asteroid'] = asteroid
         context['observations'] = asteroid.observations.all()

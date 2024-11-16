@@ -105,7 +105,7 @@ class Asteroid(models.Model):
     )
 
     def __str__(self):
-        return self.official_name or self.provisional_name or "Unnamed Asteroid"
+        return f"{self.official_name} ({self.provisional_name})" or self.provisional_name or "Unnamed Asteroid"
 
     class Meta:
         ordering = ['status', 'official_name', 'provisional_name']

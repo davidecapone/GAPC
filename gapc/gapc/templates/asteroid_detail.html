@@ -1,39 +1,85 @@
 {% extends 'base.html' %}
-{% block title %}GAPC{% endblock %}
+{% block title %}{{ asteroid.provisional_name }} - Details{% endblock %}
 {% block content %}
-<div class="container mt-5">
-    <h1>{{ asteroid }}</h1>
-    {% if asteroid.target_description %}
-        <p class="mt-3">{{ asteroid.target_description }}</p>
+<div class="container mt-5 w-100">
+    <h1 class="text-primary">
+        {% if asteroid.official_name %}
+            {{ asteroid.official_name }}
+        {% else %}
+            {{ asteroid.provisional_name }}
+        {% endif %}
+    </h1>
+    {% if asteroid.official_name %}
+    <h4 class="text-muted">Provisional Name: {{ asteroid.provisional_name }}</h4>
     {% endif %}
-
 </div>
 
-<div class="container mt-4">
-    <div class="container">
-        <ul style="margin: 0; padding: 0;">
-            {% for observation in observations %}
-            <div class="my-1 py-1">
-                <div class="card" style="width: 100%;">
-                    <div class="card-body">
-                        <p class="card-subtitle text-body-secondary">Observation on {{ observation.date_obs }}</p>
-                        <p class="mt-2">
-                            <span>Instrument:</span> <strong>{{ observation.instrument }}</strong><br>
-                            <span>Camera temperature:</span> <strong>{{ observation.temperature }} °C</strong><br>
-                            <span>Exposure Time:</span> <strong>{{ observation.exposure_time }} seconds</strong><br><br>
+<div class="container mt-4 w-100">
+    <div class="row mb-4 w-100">
+        <!-- Asteroid Details -->
+        <div class="col-md-6">
+            <ul class="list-group">
+                <li class="list-group-item">
+                    <strong>Classification:</strong> {{ asteroid.target_class|title }}
+                </li>
+                <li class="list-group-item">
+                    <strong>Status:</strong>
+                    {% if asteroid.status == "confirmed" %}
+                    <span class="badge bg-success">Confirmed</span>
+                    {% elif asteroid.status == "not_confirmed" %}
+                    <span class="badge bg-danger">Not Confirmed</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Pending Confirmation</span>
+                    {% endif %}
+                </li>
+                <li class="list-group-item">
+                    <strong>NEO:</strong> 
+                    {% if asteroid.is_neo %}
+                    <span>Yes</span>
+                    {% else %}
+                    <span>No</span>
+                    {% endif %}
+                </li>
+                {% if asteroid.target_size %}
+                <li class="list-group-item">
+                    <strong>Size:</strong> {{ asteroid.target_size }} km
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
 
-                            <span>RA:</span> <strong>{{ observation.ra }}</strong><br> 
-                            <span>Dec:</span> <strong>{{ observation.dec }}</strong><br>
-                        </p>
-                        <a href="{{ observation.filename }}" class="btn btn-primary mt-2" target="_blank">Download FITS file</a>
-                        <a href="{% url 'export_votable' observation.obs_id %}" class="btn btn-secondary mt-2" target="_blank">Export VOTable</a>
+    <!-- Observations Section -->
+    <div class="row">
+        <div class="col-md-12">
+            <h4 class="text-secondary">Observations</h4>
+            <div class="accordion" id="observationsAccordion">
+                {% for observation in observations %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading-{{ observation.obs_id }}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ observation.obs_id }}" aria-expanded="false" aria-controls="collapse-{{ observation.obs_id }}">
+                            Observation on {{ observation.date_obs|date:"F j, Y, g:i A" }}
+                        </button>
+                    </h2>
+                    <div id="collapse-{{ observation.obs_id }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ observation.obs_id }}" data-bs-parent="#observationsAccordion">
+                        <div class="accordion-body">
+                            <p>
+                                <strong>Instrument:</strong> {{ observation.instrument }}<br>
+                                <strong>Camera Temperature:</strong> {{ observation.temperature }} °C<br>
+                                <strong>Exposure Time:</strong> {{ observation.exposure_time }} seconds<br>
+                                <strong>RA:</strong> {{ observation.ra }}<br>
+                                <strong>Dec:</strong> {{ observation.dec }}<br>
+                            </p>
+                            <a href="{{ observation.filename }}" class="btn btn-primary btn-sm me-2" target="_blank">Download FITS</a>
+                            <a href="{% url 'export_votable' observation.obs_id %}" class="btn btn-secondary btn-sm" target="_blank">Export VOTable</a>
+                        </div>
                     </div>
                 </div>
+                {% empty %}
+                <p>No observations available for this asteroid.</p>
+                {% endfor %}
             </div>
-            {% empty %}
-            <p>No observations available for this asteroid.</p>
-            {% endfor %}
-        </ul>
+        </div>
     </div>
 </div>
 {% endblock %}
