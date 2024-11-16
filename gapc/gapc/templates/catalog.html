@@ -17,7 +17,7 @@
             <!-- Classification Filter Dropdown -->
             <div class="col-md-2">
                 <select class="form-select" name="classification">
-                    <option value="">Target class</option>
+                    <option value="">All classes</option>
                     {% for classification in classifications %}
                     <option value="{{ classification }}" {% if selected_classification == classification %}selected{% endif %}>
                         {{ classification|title }}
@@ -25,7 +25,6 @@
                     {% endfor %}
                 </select>
             </div>
-
 
             <!-- Search Button -->
             <div class="col-md-2">
@@ -59,17 +58,27 @@
 
                     <!-- Status, Observations, and Discovery Date -->
                     <div class="d-flex justify-content-between align-items-center">
-                        <!-- Status Badge -->
-                        <span>
-                            {% if asteroid.status == "confirmed" %}
-                            <span class="badge bg-success">Confirmed</span>
-                            {% elif asteroid.status == "not_confirmed" %}
-                            <span class="badge bg-danger">Not Confirmed</span>
-                            {% else %}
-                            <span class="badge bg-warning text-dark">Pending Confirmation</span>
-                            {% endif %}
-                        </span>
+                        
+                        <div>
+                            <!-- Status Badge -->
+                            <span>
+                                {% if asteroid.status == "confirmed" %}
+                                <span class="badge bg-success">Confirmed</span>
+                                {% elif asteroid.status == "not_confirmed" %}
+                                <span class="badge bg-danger">Not Confirmed</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Pending Confirmation</span>
+                                {% endif %}
+                            </span>
 
+                            <!-- NEO Badge -->
+                            {% if asteroid.is_neo %}
+                                <span class="badge bg-primary">neo</span>
+                            {% else %}
+                                <span class="badge bg-secondary"></span>
+                            {% endif %}
+                        </div>
+                    
                         <!-- Observation Count -->
                         <span class="badge bg-secondary">
                             {{ asteroid.observations.count }} Observations

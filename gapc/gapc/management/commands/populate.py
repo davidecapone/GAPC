@@ -96,10 +96,10 @@ class Command(BaseCommand):
     
     def get_asteroid_classification(self, asteroid_name):
         """
-        Retrieve asteroid classification from NASA SSD API.
+        Retrieve asteroid classification and NEO status from NASA SSD API.
 
         :param asteroid_name: Official name of the asteroid
-        :return: Classification string or None if not found
+        :return: A tuple (classification, is_neo) or (None, None) if not found
         """
         API_BASE_URL = 'https://ssd-api.jpl.nasa.gov/sbdb.api'
 
@@ -108,37 +108,64 @@ class Command(BaseCommand):
             response = requests.get(API_BASE_URL, params=params)
             response.raise_for_status()
             data = response.json()
-        
-            # Extract classification
+
+            # Extract classification and NEO status
             classification = data.get("object", {}).get("orbit_class", {}).get("name")
-            return classification
+            is_neo = data.get("object", {}).get("neo", False)  # Default to False if the key is not found
+            return classification, is_neo
+        
         except requests.RequestException as e:
             logger.error(f"Error fetching classification for asteroid {asteroid_name}: {e}")
-            return None
+            return None, None
 
     def get_or_create_asteroid(self, provisional_name, mappings):
-        """Retrieves or creates an asteroid instance, setting the official name if available."""
+        """
+        Retrieves or creates an asteroid instance, setting additional properties if available.
+
+        :param provisional_name: Provisional name of the asteroid
+        :param mappings: A dictionary mapping provisional names to official names
+        :return: Asteroid instance and a boolean indicating creation
+        """
+        # Fetch the official name from mappings
         official_name = mappings.get(provisional_name)
         status = 'confirmed' if official_name else 'not_confirmed'
-        classification = self.get_asteroid_classification(official_name) if official_name else None
+        classification = None
+        neo = False
 
+        # Fetch classification and NEO status if the official name exists
+        if official_name:
+            classification, neo = self.get_asteroid_classification(official_name)
+
+        # Retrieve or create the asteroid instance
         asteroid, created = Asteroid.objects.get_or_create(
             provisional_name=provisional_name,
             defaults={
                 'official_name': official_name,
                 'status': status,
-                'target_class': classification
+                'target_class': classification or "undefined",  # Default to "undefined" if classification is None
+                'is_neo': neo
             }
         )
+
+        # Log information about the asteroid
         if created:
-            if official_name:
-                logger.info(f"Created asteroid: Provisional={provisional_name}, Official={official_name}, Status={status}")
-            else:
-                logger.info(f"Created asteroid with provisional name: {provisional_name}, Status={status}")
-        return asteroid
+            logger.info(f"Created asteroid: Provisional={provisional_name}, Official={official_name}, "
+                        f"Status={status}, Class={classification}, Is NEO={neo}")
+        else:
+            logger.info(f"Asteroid already exists: Provisional={provisional_name}, Official={official_name}")
+
+        return asteroid, created
 
     def create_or_update_observation(self, header, asteroid, date_obs, filename):
+        """
+        Creates or updates an observation based on FITS header data.
+        """
+        # Extract only the asteroid instance from the tuple
+        if isinstance(asteroid, tuple):  # Handle cases where asteroid is returned as a tuple
+            asteroid = asteroid[0]
+
         instrument = self.get_or_create_instrument(header.get('INSTRUME', 'Unknown'))
+        
         observation, created = Observation.objects.get_or_create(
             asteroid=asteroid,
             date_obs=date_obs,
@@ -151,10 +178,7 @@ class Command(BaseCommand):
                 'temperature': self.get_rounded_temperature(header.get('TEMPERAT')),
             }
         )
-        if created:
-            logger.info(f"Created observation: {observation}")
-        else:
-            logger.info(f"Observation already exists for date: {date_obs}")
+        
 
     def get_or_create_instrument(self, name):
         """Retrieves or creates an instrument instance."""

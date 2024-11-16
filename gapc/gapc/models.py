@@ -93,6 +93,11 @@ class Asteroid(models.Model):
         help_text="Classification of the asteroid, e.g., Near-Earth Object, Trojan"
     )
 
+    is_neo = models.BooleanField(
+        default=False,
+        help_text='Whether the asteroid is a Near-Earth Object (NEO)'
+    )
+
     target_size = models.FloatField(
         null=True,
         blank=True,

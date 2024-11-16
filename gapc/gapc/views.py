@@ -99,7 +99,9 @@ class Catalog(TemplateView):
             queryset = queryset.filter(
                 Q(provisional_name__icontains=search_query) |
                 Q(official_name__icontains=search_query) |
-                Q(target_description__icontains=search_query)
+                Q(target_description__icontains=search_query) |
+                Q(target_class__icontains=search_query) |
+                Q(status__icontains=search_query)
             )
 
         if selected_classification:
