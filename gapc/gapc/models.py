@@ -87,17 +87,10 @@ class Asteroid(models.Model):
     )
 
     target_class = models.CharField(
-        max_length=50,
-        choices=[
-            ("neo", "Near-Earth Object"),
-            ("comet", "Comet"),
-            ("asteroid", "Asteroid"),
-            ("trojan", "Trojan"),
-            ("undefined", "Undefined"),
-        ],
+        max_length=100,
         blank=True,
-        default="undefined",
-        help_text='Classification of the asteroid'
+        null=True,
+        help_text="Classification of the asteroid, e.g., Near-Earth Object, Trojan"
     )
 
     target_size = models.FloatField(

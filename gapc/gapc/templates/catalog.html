@@ -26,13 +26,6 @@
                 </select>
             </div>
 
-            <!-- Sort Order Dropdown -->
-            <div class="col-md-2">
-                <select class="form-select" name="order">
-                    <option value="desc" {% if order_by_date == 'desc' %}selected{% endif %}>Newest First</option>
-                    <option value="asc" {% if order_by_date == 'asc' %}selected{% endif %}>Oldest First</option>
-                </select>
-            </div>
 
             <!-- Search Button -->
             <div class="col-md-2">
@@ -60,8 +53,8 @@
                     </h5>
 
                     <!-- Target Class -->
-                    <p class="mt-2">
-                        <strong>{{ asteroid.target_class }}</strong><br>
+                    <p class="text-muted small">
+                        <span>{{ asteroid.target_class }}</span><br>
                     </p>
 
                     <!-- Status, Observations, and Discovery Date -->
@@ -75,11 +68,6 @@
                             {% else %}
                             <span class="badge bg-warning text-dark">Pending Confirmation</span>
                             {% endif %}
-                        </span>
-
-                        <!-- Discovery Date -->
-                        <span class="text-muted small">
-                            Discovered: {{ asteroid.target_discovery_date }}
                         </span>
 
                         <!-- Observation Count -->

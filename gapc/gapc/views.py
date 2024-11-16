@@ -83,11 +83,10 @@ def export_votable(request, obs_id):
 
 class Catalog(TemplateView):
     template_name = 'catalog.html'
-    context_object_name = 'asteroids'
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
+
         # Retrieve query parameters
         search_query = self.request.GET.get('search', '')
         selected_classification = self.request.GET.get('classification', '')
@@ -95,30 +94,36 @@ class Catalog(TemplateView):
 
         # Filter asteroids based on search and classification
         queryset = Asteroid.objects.all()
-        
+
         if search_query:
             queryset = queryset.filter(
                 Q(provisional_name__icontains=search_query) |
                 Q(official_name__icontains=search_query) |
                 Q(target_description__icontains=search_query)
             )
-        
+
         if selected_classification:
             queryset = queryset.filter(target_class=selected_classification)
-        
+
         # Apply sorting based on the order_by_date option
         if order_by_date == 'asc':
             queryset = queryset.order_by('target_discovery_date')
         else:
             queryset = queryset.order_by('-target_discovery_date')
-        
-        # Get unique classification choices from the database
-        classifications = set(Asteroid.objects.values_list('target_class', flat=True).distinct())
-        
+
+        # Get unique classification choices from the database, handle NoneType values, and remove duplicates
+        classifications = (
+            Asteroid.objects.values_list('target_class', flat=True)
+            .distinct()
+        )
+        classifications = sorted(
+            {cls if cls is not None else "Undefined" for cls in classifications}
+        )
+
         context['asteroids'] = queryset
         context['search_query'] = search_query
         context['selected_classification'] = selected_classification
-        context['classifications'] = sorted(classifications)  # Sort alphabetically, optional
+        context['classifications'] = classifications
         context['order_by_date'] = order_by_date
         return context
 

@@ -2,6 +2,7 @@ import os
 import csv
 import logging
 import shutil
+import requests
 from datetime import datetime
 
 from django.core.management.base import BaseCommand
@@ -92,16 +93,41 @@ class Command(BaseCommand):
     def get_provisional_name_from_filename(self, filename):
         """Extracts the provisional name from the filename."""
         return os.path.basename(filename).split('_')[0]
+    
+    def get_asteroid_classification(self, asteroid_name):
+        """
+        Retrieve asteroid classification from NASA SSD API.
+
+        :param asteroid_name: Official name of the asteroid
+        :return: Classification string or None if not found
+        """
+        API_BASE_URL = 'https://ssd-api.jpl.nasa.gov/sbdb.api'
+
+        try:
+            params = {"sstr": asteroid_name}
+            response = requests.get(API_BASE_URL, params=params)
+            response.raise_for_status()
+            data = response.json()
+        
+            # Extract classification
+            classification = data.get("object", {}).get("orbit_class", {}).get("name")
+            return classification
+        except requests.RequestException as e:
+            logger.error(f"Error fetching classification for asteroid {asteroid_name}: {e}")
+            return None
 
     def get_or_create_asteroid(self, provisional_name, mappings):
         """Retrieves or creates an asteroid instance, setting the official name if available."""
         official_name = mappings.get(provisional_name)
         status = 'confirmed' if official_name else 'not_confirmed'
+        classification = self.get_asteroid_classification(official_name) if official_name else None
+
         asteroid, created = Asteroid.objects.get_or_create(
             provisional_name=provisional_name,
             defaults={
                 'official_name': official_name,
-                'status': status
+                'status': status,
+                'target_class': classification
             }
         )
         if created:
