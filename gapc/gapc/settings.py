@@ -134,5 +134,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Fits directory path (media/fits)
 FITS_DIR = os.path.join(settings.BASE_DIR, 'media', 'fits')
 
+# Media settings
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
