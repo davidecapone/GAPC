@@ -26,7 +26,9 @@ urlpatterns = [
     path('', views.Catalog.as_view(), name='home'),  # Route the home page to the home view
     path('catalog/', views.Catalog.as_view(), name='catalog'),  # Route the catalog page to the Catalog view
     path('catalog/<str:target_name>/', views.AsteroidDetail.as_view(), name='asteroid_detail'),  # Route the asteroid detail page using target_name
+    
     path('export_votable/<int:obs_id>/', views.export_votable, name='export_votable'),  # Route the export_votable page using obs_id
+    path('download/fits/<str:filename>/', views.download_fits, name='download_fits'),
 ]
 
 if settings.DEBUG:

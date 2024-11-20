@@ -137,3 +137,18 @@ FITS_DIR = os.path.join(settings.BASE_DIR, 'media', 'fits')
 # Media settings
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+"""
+Deployment Considerations:
+
+- Configure web server (e.g., Nginx or Apache) to serve files from the MEDIA_ROOT directory.
+- Example Nginx configuration:
+    server {
+        listen 80;
+        ...
+        location /media/ {
+            alias /path/to/media/;
+        }
+        ...
+    }
+"""

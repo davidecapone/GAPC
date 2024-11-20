@@ -17,7 +17,7 @@
 <div class="container mt-4 w-100">
     <div class="row mb-4 w-100">
         <!-- Asteroid Details -->
-        <div class="col-md-6">
+        <div class="col-md-6 w-100">
             <ul class="list-group">
                 <li class="list-group-item">
                     <strong>Classification:</strong> {{ asteroid.target_class|title }}
@@ -70,7 +70,7 @@
                                 <strong>RA:</strong> {{ observation.ra }}<br>
                                 <strong>Dec:</strong> {{ observation.dec }}<br>
                             </p>
-                            <a href="{{ MEDIA_URL }}fits/processed/{{ observation.filename }}" class="btn btn-primary btn-sm me-2" target="_blank">Download FITS</a>
+                            <a href="{% url 'download_fits' observation.filename %}" class="btn btn-primary btn-sm me-2" target="_blank">Download FITS</a>
                             <a href="{% url 'export_votable' observation.obs_id %}" class="btn btn-secondary btn-sm" target="_blank">Export VOTable</a>
                         </div>
                     </div>

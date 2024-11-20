@@ -1,6 +1,6 @@
 # gapc/views.py
 from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponse
+from django.http import HttpResponse, FileResponse, Http404
 from django.views.generic import TemplateView, ListView
 from django.db.models import Q
 from .models import Asteroid, Observation
@@ -17,6 +17,7 @@ from astropy.table import Table as AstroTable
 from astropy.io import fits
 from django.conf import settings
 import os
+from django.contrib.auth.decorators import login_required
 
 
 import numpy as np
@@ -139,3 +140,17 @@ class AsteroidDetail(TemplateView):
         context['observations'] = asteroid.observations.all()
         context['MEDIA_URL'] = settings.MEDIA_URL  # Include MEDIA_URL for templates
         return context
+    
+def download_fits(request, filename):
+    """
+    Serve a FITS file for download.
+    """
+    if '..' in filename or '/' in filename or '\\' in filename:
+        raise Http404("Invalid file name.")
+    file_path = os.path.join(settings.MEDIA_ROOT, 'fits/processed', filename)
+    if os.path.exists(file_path):
+        response = FileResponse(open(file_path, 'rb'), content_type='application/fits')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    else:
+        raise Http404(f"FITS file '{filename}' not found.")
