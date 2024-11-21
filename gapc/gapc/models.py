@@ -74,12 +74,6 @@ class Asteroid(models.Model):
         help_text="Confirmation status of the asteroid"
     )
 
-    # Other existing fields
-    target_description = models.TextField(
-        blank=True,
-        help_text='Brief description of the asteroid'
-    )
-
     target_discovery_date = models.DateTimeField(
         null=True,
         blank=True,
@@ -96,12 +90,6 @@ class Asteroid(models.Model):
     is_neo = models.BooleanField(
         default=False,
         help_text='Whether the asteroid is a Near-Earth Object (NEO)'
-    )
-
-    target_size = models.FloatField(
-        null=True,
-        blank=True,
-        help_text='Size of the asteroid in kilometers'
     )
 
     def __str__(self):
@@ -135,9 +123,12 @@ class Observation(models.Model):
         help_text="Instrument used for the observation"
     )
 
-
-    exposure_time = models.FloatField(
+    exptime = models.FloatField(
         help_text='Exposure time in seconds'
+    )
+
+    exposure = models.FloatField(
+        help_text='Exposure in seconds'
     )
 
     ra = models.CharField(
@@ -154,10 +145,18 @@ class Observation(models.Model):
         help_text='Declination in DD:MM:SS.s format'
     )
 
-    temperature = models.FloatField(
+    temperat = models.FloatField(
         null=True,
         blank=True,
         help_text='Temperature during observation in Celsius'
+    )
+
+    naxis1 = models.IntegerField(
+        help_text='Number of pixels along the x-axis'
+    )
+
+    naxis2 = models.IntegerField(
+        help_text='Number of pixels along the y-axis'
     )
 
     filename = models.CharField(

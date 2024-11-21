@@ -5,6 +5,7 @@ from django.views.generic import TemplateView, ListView
 from django.db.models import Q
 from .models import Asteroid, Observation
 from datetime import datetime
+from urllib.parse import urljoin
 
 
 from django.shortcuts import render
@@ -19,20 +20,29 @@ from django.conf import settings
 import os
 from django.contrib.auth.decorators import login_required
 
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 import numpy as np
 
 def export_votable(request, obs_id):
-    # Retrieve the observation object
+    """
+    Export metadata of a specific observation in VOTable format.
+    """
     observation = get_object_or_404(Observation, obs_id=obs_id)
     
     # Construct the full path to the FITS file
-    fits_file_path = os.path.join(settings.FITS_DIR, observation.filename)
+    fits_file_path = os.path.join(settings.FITS_DIR, 'processed', observation.filename)
+
+    # Debug logging for the file path
+    logger.info(f"Attempting to access FITS file at: {fits_file_path}")
     
     # Check if the FITS file exists
     if not os.path.exists(fits_file_path):
-        return HttpResponse(f"FITS file '{observation.filename}' not found.", status=404)
-    
+        logger.error(f"File not found: {fits_file_path}")
+        return HttpResponse(f"FITS file '{observation.filename}' not found in the processed directory.", status=404)
+
     # Open the FITS file and extract header information
     with fits.open(fits_file_path) as hdul:
         header = hdul[0].header
@@ -57,7 +67,8 @@ def export_votable(request, obs_id):
         ('temperature', 'float', 'Camera temperature in Celsius'),
         ('exposure_time', 'float', 'Exposure time in seconds'),
         ('ra', 'char', 'Right Ascension'),
-        ('dec', 'char', 'Declination')
+        ('dec', 'char', 'Declination'),
+        ('fits_link', 'char', 'Link to the FITS file')
     ]
     
     for field_name, datatype, description in fields:
@@ -72,7 +83,8 @@ def export_votable(request, obs_id):
         temperature,
         exposure_time,
         ra,
-        dec
+        dec,
+        f"{request.build_absolute_uri(settings.MEDIA_URL)}fits/processed/{observation.filename}"
     )
     
     # Create HTTP response with VOTable XML

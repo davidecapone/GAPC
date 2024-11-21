@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 SUPPORTED_FITS_EXTENSIONS = ('fits', 'fit')
-MAPPINGS_FILE = os.path.join(settings.MEDIA_ROOT, 'mappings.csv')  # Adjust path as necessary
+MAPPINGS_FILE = os.path.join(settings.MEDIA_ROOT, 'mappings.csv')
 
 class Command(BaseCommand):
     help = 'Import FITS files from a specified directory into the database'
@@ -151,8 +151,6 @@ class Command(BaseCommand):
         if created:
             logger.info(f"Created asteroid: Provisional={provisional_name}, Official={official_name}, "
                         f"Status={status}, Class={classification}, Is NEO={neo}")
-        else:
-            logger.info(f"Asteroid already exists: Provisional={provisional_name}, Official={official_name}")
 
         return asteroid, created
 
@@ -164,22 +162,32 @@ class Command(BaseCommand):
         if isinstance(asteroid, tuple):  # Handle cases where asteroid is returned as a tuple
             asteroid = asteroid[0]
 
-        instrument = self.get_or_create_instrument(header.get('INSTRUME', 'Unknown'))
+        instrument = self.get_or_create_instrument( header.get('INSTRUME', 'Unknown') )
+        filename = os.path.basename(filename)
+        exptime = header.get('EXPTIME', 0.0)
+        exposure = header.get('EXPOSURE', 0.0)
+        temperat = self.get_rounded_temperature( header.get('TEMPERAT') )
+        ra = header.get('RA', '00:00:00.0')
+        dec = header.get('DEC', '00:00:00.0')
+        naxis1 = header.get('NAXIS1', 0)
+        naxis2 = header.get('NAXIS2', 0)
         
         observation, created = Observation.objects.get_or_create(
             asteroid=asteroid,
             date_obs=date_obs,
             defaults={
                 'instrument': instrument,
-                'exposure_time': header.get('EXPTIME', 0.0),
-                'ra': header.get('RA', '00:00:00.0'),
-                'dec': header.get('DEC', '00:00:00.0'),
-                'filename': os.path.basename(filename),
-                'temperature': self.get_rounded_temperature(header.get('TEMPERAT')),
+                'exptime' : exptime,
+                'exposure': exposure,
+                'temperat': temperat,
+                'ra': ra,
+                'dec': dec,
+                'naxis1': naxis1,
+                'naxis2': naxis2,
+                'filename': filename
             }
         )
         
-
     def get_or_create_instrument(self, name):
         """Retrieves or creates an instrument instance."""
         if name == 'Unknown':
