@@ -26,65 +26,103 @@ logger.setLevel(logging.DEBUG)
 
 import numpy as np
 
+def download_fits(request, filename):
+    """ Download a processed FITS file. """
+    
+    if '..' in filename or '/' in filename or '\\' in filename:
+        raise Http404("Invalid file name.")
+    
+    file_path = os.path.join(settings.MEDIA_ROOT, 'fits/processed', filename)
+    if os.path.exists(file_path):
+        response = FileResponse(open(file_path, 'rb'), content_type='application/fits')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    else:
+        raise Http404(f"FITS file '{filename}' not found.")
+
 def export_votable(request, obs_id):
     """
-    Export metadata of a specific observation in VOTable format.
+    Export an observation as a VOTable with metadata, including semantic annotations (UCDs).
     """
+    # Retrieve the observation object
     observation = get_object_or_404(Observation, obs_id=obs_id)
     
     # Construct the full path to the FITS file
     fits_file_path = os.path.join(settings.FITS_DIR, 'processed', observation.filename)
 
-    # Debug logging for the file path
-    logger.info(f"Attempting to access FITS file at: {fits_file_path}")
+    # Log debug information
+    logger.info(f"Attempting to export VOTable for FITS file at: {fits_file_path}")
     
     # Check if the FITS file exists
     if not os.path.exists(fits_file_path):
         logger.error(f"File not found: {fits_file_path}")
         return HttpResponse(f"FITS file '{observation.filename}' not found in the processed directory.", status=404)
 
-    # Open the FITS file and extract header information
-    with fits.open(fits_file_path) as hdul:
-        header = hdul[0].header
-        date_obs = header.get('DATE-OBS', 'N/A')
-        instrument = header.get('INSTRUME', 'Unknown')
-        temperature = header.get('TEMPERAT', np.nan)
-        exposure_time = header.get('EXPTIME', np.nan)
-        ra = header.get('RA', 'N/A')
-        dec = header.get('DEC', 'N/A')
-    
-    # Create VOTable structure
+    try:
+        # Open the FITS file and extract header information
+        with fits.open(fits_file_path) as hdul:
+            header = hdul[0].header
+
+            date_obs = header.get('DATE-OBS', 'N/A')
+            naxis1 = header.get('NAXIS1', 'N/A')
+            naxis2 = header.get('NAXIS2', 'N/A')
+            temperature = header.get('TEMPERAT', 'N/A')
+            exptime = header.get('EXPTIME', 'N/A')
+            exposure = header.get('EXPOSURE', 'N/A')
+            ra = header.get('RA', 'N/A')
+            dec = header.get('DEC', 'N/A')
+
+    except Exception as e:
+        logger.error(f"Error reading FITS file header: {e}")
+        return HttpResponse("Error processing the FITS file header.", status=500)
+
+    # Create the VOTable structure
     votable = VOTableFile()
     resource = Resource()
     votable.resources.append(resource)
     votable_table = Table(votable)
     resource.tables.append(votable_table)
     
-    # Define table fields
+    # Define table fields with UCDs
     fields = [
-        ('date_obs', 'char', 'Date and time of the observation'),
-        ('instrument', 'char', 'Instrument used for the observation'),
-        ('temperature', 'float', 'Camera temperature in Celsius'),
-        ('exposure_time', 'float', 'Exposure time in seconds'),
-        ('ra', 'char', 'Right Ascension'),
-        ('dec', 'char', 'Declination'),
-        ('fits_link', 'char', 'Link to the FITS file')
+        {'name': 'date_obs', 'datatype': 'char', 'ucd': 'time.start', 'description': 'Date and time of the observation'},
+        {'name': 'naxis1', 'datatype': 'int', 'ucd': 'meta.number', 'description': 'Number of pixels along the x-axis'},
+        {'name': 'naxis2', 'datatype': 'int', 'ucd': 'meta.number', 'description': 'Number of pixels along the y-axis'},
+        {'name': 'temperature', 'datatype': 'float', 'ucd': 'phys.temperature', 'description': 'Camera temperature in Celsius'},
+        {'name': 'exptime', 'datatype': 'float', 'ucd': 'time.duration', 'description': 'Exposure time in seconds'},
+        {'name': 'exposure', 'datatype': 'float', 'ucd': 'time.duration', 'description': 'Exposure in seconds'},
+        {'name': 'ra', 'datatype': 'char', 'ucd': 'pos.eq.ra', 'description': 'Right Ascension'},
+        {'name': 'dec', 'datatype': 'char', 'ucd': 'pos.eq.dec', 'description': 'Declination'},
+        {'name': 'fits_link', 'datatype': 'char', 'ucd': 'meta.ref.url', 'description': 'Link to the FITS file'}
     ]
     
-    for field_name, datatype, description in fields:
-        arraysize = "*" if datatype == 'char' else None
-        votable_table.fields.append(Field(votable, name=field_name, datatype=datatype, arraysize=arraysize, description=description))
+    # Populate fields in the VOTable
+    for field in fields:
+        arraysize = "*" if field['datatype'] == 'char' else None
+        votable_table.fields.append(Field(
+            votable, 
+            name=field['name'], 
+            datatype=field['datatype'], 
+            arraysize=arraysize, 
+            description=field['description'], 
+            ucd=field['ucd']
+        ))
+    
+    # Initialize table data
     votable_table.create_arrays(1)  # Create a table with one row
     
-    # Populate table data with FITS header information
+    # Populate the table with extracted metadata
+    fits_link = f"{request.build_absolute_uri(settings.MEDIA_URL)}fits/processed/{observation.filename}"
     votable_table.array[0] = (
         date_obs,
-        instrument,
+        naxis1,
+        naxis2,
         temperature,
-        exposure_time,
+        exptime,
+        exposure,
         ra,
         dec,
-        f"{request.build_absolute_uri(settings.MEDIA_URL)}fits/processed/{observation.filename}"
+        fits_link
     )
     
     # Create HTTP response with VOTable XML
@@ -92,9 +130,14 @@ def export_votable(request, obs_id):
     response['Content-Disposition'] = f'attachment; filename="observation_{obs_id}.xml"'
     votable.to_xml(response)
     
+    # Log success
+    logger.info(f"Successfully generated VOTable for observation {obs_id}")
+    
     return response
 
 class Catalog(TemplateView):
+    """ Retrieve the catalog of asteroids. """
+
     template_name = 'catalog.html'
 
     def get_context_data(self, **kwargs):
@@ -143,6 +186,8 @@ class Catalog(TemplateView):
         return context
 
 class AsteroidDetail(TemplateView):
+    """ Retrieve the observations of a specific asteroid. """
+
     template_name = 'asteroid_detail.html'
 
     def get_context_data(self, **kwargs):
@@ -152,17 +197,3 @@ class AsteroidDetail(TemplateView):
         context['observations'] = asteroid.observations.all()
         context['MEDIA_URL'] = settings.MEDIA_URL  # Include MEDIA_URL for templates
         return context
-    
-def download_fits(request, filename):
-    """
-    Serve a FITS file for download.
-    """
-    if '..' in filename or '/' in filename or '\\' in filename:
-        raise Http404("Invalid file name.")
-    file_path = os.path.join(settings.MEDIA_ROOT, 'fits/processed', filename)
-    if os.path.exists(file_path):
-        response = FileResponse(open(file_path, 'rb'), content_type='application/fits')
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
-    else:
-        raise Http404(f"FITS file '{filename}' not found.")
