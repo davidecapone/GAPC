@@ -1,48 +1,6 @@
 from django.db import models
 from django.utils import timezone
 
-
-class Instrument(models.Model):
-
-    name = models.CharField(
-        primary_key=True,
-        max_length=100, 
-        help_text="Name of the instrument, e.g., Alta U9000"
-    )
-
-    manufacturer = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text="Manufacturer of the instrument"
-    )
-
-    max_exposure_time = models.FloatField(
-        blank=True,
-        null=True,
-        help_text="Maximum exposure time in milliseconds"
-    )
-
-    min_exposure_time = models.FloatField(
-        blank=True,
-        null=True,
-        help_text="Minimum exposure time in milliseconds"
-    )
-
-    pixel_size = models.CharField(
-        max_length=20, 
-        blank=True,
-        null=True,
-        help_text="Pixel size in microns, e.g., 12 x 12 microns"
-    )
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        ordering = ['name']
-        verbose_name = 'Instrument'
-        verbose_name_plural = 'Instruments'
-
 class Asteroid(models.Model):
     STATUS_CHOICES = [
         ("confirmed", "Confirmed"),
@@ -72,12 +30,6 @@ class Asteroid(models.Model):
         choices=STATUS_CHOICES,
         default="pending",
         help_text="Confirmation status of the asteroid"
-    )
-
-    target_discovery_date = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text='Date and time of discovery'
     )
 
     target_class = models.CharField(
@@ -114,13 +66,6 @@ class Observation(models.Model):
 
     date_obs = models.DateTimeField(
         help_text='Date and time of the observation'
-    )
-
-    instrument = models.ForeignKey(
-        Instrument, 
-        on_delete=models.SET_NULL, 
-        null=True, blank=True, 
-        help_text="Instrument used for the observation"
     )
 
     exptime = models.FloatField(

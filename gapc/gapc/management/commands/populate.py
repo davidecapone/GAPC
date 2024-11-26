@@ -9,7 +9,7 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.utils import timezone
 
-from gapc.models import Asteroid, Observation, Instrument
+from gapc.models import Asteroid, Observation
 from astropy.io import fits
 from tqdm import tqdm
 
@@ -162,7 +162,6 @@ class Command(BaseCommand):
         if isinstance(asteroid, tuple):  # Handle cases where asteroid is returned as a tuple
             asteroid = asteroid[0]
 
-        instrument = self.get_or_create_instrument( header.get('INSTRUME', 'Unknown') )
         filename = os.path.basename(filename)
         exptime = header.get('EXPTIME', 0.0)
         exposure = header.get('EXPOSURE', 0.0)
@@ -176,7 +175,6 @@ class Command(BaseCommand):
             asteroid=asteroid,
             date_obs=date_obs,
             defaults={
-                'instrument': instrument,
                 'exptime' : exptime,
                 'exposure': exposure,
                 'temperat': temperat,
@@ -187,25 +185,6 @@ class Command(BaseCommand):
                 'filename': filename
             }
         )
-        
-    def get_or_create_instrument(self, name):
-        """Retrieves or creates an instrument instance."""
-        if name == 'Unknown':
-            name = "Alta U9000"  # Default instrument if unknown
-
-        instrument, created = Instrument.objects.get_or_create(
-            name=name,
-            defaults={
-                'manufacturer': "Apogee Imaging Systems",
-                'max_exposure_time': 60000.0,
-                'min_exposure_time': 1.0,
-                'pixel_size': "12 x 12 microns"
-            }
-        )
-
-        if created:
-            logger.info(f"Created instrument with default values: {instrument}")
-        return instrument
 
     def get_rounded_temperature(self, temp):
         return round(temp, 3) if temp is not None else None

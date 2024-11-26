@@ -42,7 +42,7 @@ def download_fits(request, filename):
 
 def export_votable(request, obs_id):
     """
-    Export an observation as a VOTable with metadata, including semantic annotations (UCDs).
+    Export an observation as a VOTable with metadata, including semantic annotations (UCDs) and descriptions.
     """
     # Retrieve the observation object
     observation = get_object_or_404(Observation, obs_id=obs_id)
@@ -83,30 +83,79 @@ def export_votable(request, obs_id):
     votable_table = Table(votable)
     resource.tables.append(votable_table)
     
-    # Define table fields with UCDs
+    # Define table fields with UCDs and detailed descriptions
     fields = [
-        {'name': 'date_obs', 'datatype': 'char', 'ucd': 'time.start', 'description': 'Date and time of the observation'},
-        {'name': 'naxis1', 'datatype': 'int', 'ucd': 'meta.number', 'description': 'Number of pixels along the x-axis'},
-        {'name': 'naxis2', 'datatype': 'int', 'ucd': 'meta.number', 'description': 'Number of pixels along the y-axis'},
-        {'name': 'temperature', 'datatype': 'float', 'ucd': 'phys.temperature', 'description': 'Camera temperature in Celsius'},
-        {'name': 'exptime', 'datatype': 'float', 'ucd': 'time.duration', 'description': 'Exposure time in seconds'},
-        {'name': 'exposure', 'datatype': 'float', 'ucd': 'time.duration', 'description': 'Exposure in seconds'},
-        {'name': 'ra', 'datatype': 'char', 'ucd': 'pos.eq.ra', 'description': 'Right Ascension'},
-        {'name': 'dec', 'datatype': 'char', 'ucd': 'pos.eq.dec', 'description': 'Declination'},
-        {'name': 'fits_link', 'datatype': 'char', 'ucd': 'meta.ref.url', 'description': 'Link to the FITS file'}
+        {
+            'name': 'date_obs',
+            'datatype': 'char',
+            'ucd': 'time.start',
+            'description': 'The starting date and time of the observation in ISO 8601 format'
+        },
+        {
+            'name': 'naxis1',
+            'datatype': 'int',
+            'ucd': 'meta.number',
+            'description': 'The number of pixels along the x-axis (image width)'
+        },
+        {
+            'name': 'naxis2',
+            'datatype': 'int',
+            'ucd': 'meta.number',
+            'description': 'The number of pixels along the y-axis (image height)'
+        },
+        {
+            'name': 'temperature',
+            'datatype': 'float',
+            'ucd': 'phys.temperature',
+            'description': 'The temperature of the camera sensor in degrees Celsius'
+        },
+        {
+            'name': 'exptime',
+            'datatype': 'float',
+            'ucd': 'time.duration',
+            'description': 'The total exposure time for the observation in seconds'
+        },
+        {
+            'name': 'exposure',
+            'datatype': 'float',
+            'ucd': 'time.duration',
+            'description': 'The effective exposure duration in seconds'
+        },
+        {
+            'name': 'ra',
+            'datatype': 'char',
+            'ucd': 'pos.eq.ra',
+            'description': 'The Right Ascension coordinate of the observation in HH:MM:SS format'
+        },
+        {
+            'name': 'dec',
+            'datatype': 'char',
+            'ucd': 'pos.eq.dec',
+            'description': 'The Declination coordinate of the observation in DD:MM:SS format'
+        },
+        {
+            'name': 'fits_link',
+            'datatype': 'char',
+            'ucd': 'meta.ref.url',
+            'description': 'A URL link to download the associated FITS file for this observation'
+        }
     ]
     
     # Populate fields in the VOTable
     for field in fields:
         arraysize = "*" if field['datatype'] == 'char' else None
-        votable_table.fields.append(Field(
+        votable_field = Field(
             votable, 
             name=field['name'], 
             datatype=field['datatype'], 
             arraysize=arraysize, 
-            description=field['description'], 
             ucd=field['ucd']
-        ))
+        )
+        votable_table.fields.append(votable_field)
+        
+        # Add description as a child element
+        if 'description' in field:
+            votable_field.description = field['description']
     
     # Initialize table data
     votable_table.create_arrays(1)  # Create a table with one row
@@ -146,7 +195,6 @@ class Catalog(TemplateView):
         # Retrieve query parameters
         search_query = self.request.GET.get('search', '')
         selected_classification = self.request.GET.get('classification', '')
-        order_by_date = self.request.GET.get('order', 'desc')  # Default to descending order
 
         # Filter asteroids based on search and classification
         queryset = Asteroid.objects.all()
@@ -163,11 +211,6 @@ class Catalog(TemplateView):
         if selected_classification:
             queryset = queryset.filter(target_class=selected_classification)
 
-        # Apply sorting based on the order_by_date option
-        if order_by_date == 'asc':
-            queryset = queryset.order_by('target_discovery_date')
-        else:
-            queryset = queryset.order_by('-target_discovery_date')
 
         # Get unique classification choices from the database, handle NoneType values, and remove duplicates
         classifications = (
@@ -182,7 +225,6 @@ class Catalog(TemplateView):
         context['search_query'] = search_query
         context['selected_classification'] = selected_classification
         context['classifications'] = classifications
-        context['order_by_date'] = order_by_date
         return context
 
 class AsteroidDetail(TemplateView):
