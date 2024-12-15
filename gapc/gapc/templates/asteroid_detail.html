@@ -40,9 +40,12 @@
                     <span>No</span>
                     {% endif %}
                 </li>
-                {% if asteroid.target_size %}
+                {% if asteroid.official_name %}
                 <li class="list-group-item">
-                    <strong>Size:</strong> {{ asteroid.target_size }} km
+                    <strong>NASA SSD:</strong> 
+                    <span>
+                        <a href="https://ssd.jpl.nasa.gov/sbdb.cgi?sstr={{ asteroid.official_name }}" target="_blank">https://ssd.jpl.nasa.gov/sbdb.cgi?sstr={{ asteroid.official_name }}</a>
+                    </span>
                 </li>
                 {% endif %}
             </ul>
