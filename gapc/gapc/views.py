@@ -26,6 +26,60 @@ logger.setLevel(logging.DEBUG)
 
 import numpy as np
 
+from django.shortcuts import render, get_object_or_404
+from django.http import Http404
+from astropy.io import fits
+from io import BytesIO
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Use the Agg backend for non-interactive plotting
+import matplotlib.pyplot as plt
+import base64
+import os
+from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
+
+def preview_fits_image(request, filename):
+    """
+    Render a page to preview a given FITS file as an image.
+    """
+    # Construct the full path to the FITS file
+    fits_file_path = os.path.join(settings.FITS_DIR, 'processed', filename)
+
+    # Check if the FITS file exists
+    if not os.path.exists(fits_file_path):
+        raise Http404(f"FITS file '{filename}' not found.")
+
+    try:
+        # Open the FITS file
+        with fits.open(fits_file_path) as hdul:
+            data = hdul[0].data  # Assume the image data is in the first HDU
+            if data is None:
+                raise ValueError("No image data found in FITS file.")
+
+            # Normalize the data for display
+            #data = np.log10(data - np.min(data) + 1)
+
+            # Generate the image using Matplotlib
+            plt.figure(figsize=(8, 8))  # Optional: Adjust figure size
+            plt.imshow(data, cmap='gray', origin='lower')
+            plt.axis('off')  # Remove axes for cleaner image
+            buffer = BytesIO()
+            plt.savefig(buffer, format='png', bbox_inches='tight', pad_inches=0)
+            plt.close()  # Close the figure to free resources
+            buffer.seek(0)
+            image_data = buffer.getvalue()
+
+        # Encode the image as base64 for rendering in HTML
+        encoded_image = base64.b64encode(image_data).decode('utf-8')
+        return render(request, 'fits_preview.html', {'image_data': encoded_image, 'filename': filename})
+
+    except Exception as e:
+        logger.error(f"Error generating preview for FITS file '{filename}': {e}")
+        return HttpResponse("Error generating preview for FITS file.", status=500)
+    
 def download_fits(request, filename):
     """ Download a processed FITS file. """
     
@@ -203,7 +257,6 @@ class Catalog(TemplateView):
             queryset = queryset.filter(
                 Q(provisional_name__icontains=search_query) |
                 Q(official_name__icontains=search_query) |
-                Q(target_description__icontains=search_query) |
                 Q(target_class__icontains=search_query) |
                 Q(status__icontains=search_query)
             )
